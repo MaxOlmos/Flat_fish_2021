@@ -104,7 +104,7 @@ p
 Data_1 <- Data_summer %>% group_by(year, week, adfg) %>% summarise(CPUE.mean =mean(CPUE*1000))
 
 p <- ggplot(data=Data_1%>% filter(week %in% c(12:38)), aes(x=week, y=log(CPUE.mean)))+geom_point()+
-  stat_smooth( method = "gam", colour="black",size=2, formula = y ~ s(x))
+  stat_smooth( method = "gam", colour="black",size=2, formula = y ~ s(x)) +theme_bw() 
 p
 
 png(paste0(file_output, '/logCPUE=f(week)', '.png'), height =7 , width = 5, units = 'in', res=600)
@@ -156,12 +156,14 @@ p.Tyears <- ggplot() +
                                     color=CP,shape=CP),alpha=0.4)  +
   scale_color_manual(values=c("blue","red")) +
   coord_fixed(xlim = xlims,ylim=ylims)+
-  scale_size_continuous(range=c(1,8))+
+  scale_size_continuous(range=c(1,4))+
   theme_bw()
 
-png(paste(file_output,'/CPUE_adfg_week-survey','.png',sep=''), height =10 , width = 15, units = 'in', res=600)
-p.Tyears + facet_wrap(~week)
-dev.off()  
+#png(paste(file_output,'/CPUE_adfg_week-survey','.png',sep=''), height =21 , width = 12 , units = 'cm', res=600)
+p <- p.Tyears + facet_wrap(~week,ncol=4)
+p
+ggsave(paste0(file_output,"/CPUE_adfg_week.png"), width = 28, height = 28, units = "cm")
+#dev.off()  
 
 # - Covariate Season = Early, Int , Lat -----------------------------------
 
