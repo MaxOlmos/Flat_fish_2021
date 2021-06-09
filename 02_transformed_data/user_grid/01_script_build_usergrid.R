@@ -23,7 +23,7 @@ load(paste0(file_output,"/CPUE_catchability_adfg.RData"))
 
 plot(CPUE_catchability$long, CPUE_catchability$lat)
 LL <- locator()
-saveRDS(LL, 'extent_LL.rds')
+saveRDS(LL, '02_transformed_data/user_grid/extent_LL.rds')
 
 ## Take a data.frame of coordinates in longitude/latitude that
 ## define the outer limits of the region (the extent).
@@ -97,7 +97,7 @@ str(region)
 ##  $ row     : int  401 402 975 976 977 978 1549 1550 1551 1552 ...
 
 ### Save it to be read in and passed to VAST later.
-saveRDS(region, file = "user_region.rds")
+saveRDS(region, file = "02_transformed_data/user_grid/user_region.rds")
 ### End of creating user extrapolation region object
 ### --------------------------------------------------
 
