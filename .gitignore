@@ -44,3 +44,5 @@ vignettes/*.pdf
 /*01_data
 *.Rproj
 *.png
+/*04_outputs
+*.RData
