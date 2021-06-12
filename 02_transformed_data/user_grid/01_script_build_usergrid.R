@@ -6,7 +6,8 @@
 ### demonstrate two ways of doing this: (1) From a set of points
 ### representing the outer extent of the region; (2) from an
 ### existing shape file.
-
+rm(list=ls())
+getwd()
 library(sp) # 1.4.4
 library(sf) # 0.9.6
 
@@ -15,6 +16,16 @@ library(sf) # 0.9.6
 ### your data and simply create a region that captures it. The
 ### locator() function can be useful for this as shown
 ### below. Here we use a subset of the Eastern Bering Sea.
+shape_path <- "C:/Users/Maxime/Documents/Git/Flat_fish/Pheno-flatfish/ADFGv2/shapefile/"
+coast_shapefile <- paste(shape_path, "ne_50m_land.shp", sep="")
+ocean <- readOGR(coast_shapefile)
+
+bathy.dat<-read.table('C:/Users/Maxime/Documents/Git/Flat_fish_2021/01_data/bathyEBS/BeringDepth.txt',sep='') 
+names(bathy.dat)<-c('lon','lat','depth')
+bathy.dat$depth[bathy.dat$depth>0]<-NA#Avoid points above water
+head(bathy.dat)
+bathy.mat<- matrix(bathy.dat$depth,nrow=length(unique(bathy.dat$lon)),ncol=length(unique(bathy.dat$lat)))[,order(unique(bathy.dat$lat))]
+
 
 ### Load data
 file_output <- "02_transformed_data/observer"
@@ -22,12 +33,15 @@ load(paste0(file_output,"/CPUE_catchability_adfg.RData"))
 ### Use this to draw points around your data
 
 plot(CPUE_catchability$long, CPUE_catchability$lat)
-LL <- locator()
-saveRDS(LL, '02_transformed_data/user_grid/extent_LL.rds')
+plot(ocean,col="dark gray",axes=F,xlim=c(-180,-158),ylim=c(54,62),add=TRUE)
+contour(unique(bathy.dat$lon),sort(unique(bathy.dat$lat)),bathy.mat,levels=-c(200,100,50),labcex=0.4,col='black',add=T)
+
+#LL <- locator()
+#saveRDS(LL, '02_transformed_data/user_grid/extent_LL2.rds')
 
 ## Take a data.frame of coordinates in longitude/latitude that
 ## define the outer limits of the region (the extent).
-LL <- readRDS('extent_LL.rds')
+LL <- readRDS('02_transformed_data/user_grid/extent_LL1.rds')
 region_extent <- data.frame(long=LL$x, lat=LL$y)
 str(region_extent)
 ## > 'data.frame':	42 obs. of  2 variables:
@@ -97,12 +111,13 @@ str(region)
 ##  $ row     : int  401 402 975 976 977 978 1549 1550 1551 1552 ...
 
 ### Save it to be read in and passed to VAST later.
-saveRDS(region, file = "02_transformed_data/user_grid/user_region.rds")
+saveRDS(region, file = "02_transformed_data/user_grid/user_region1.rds")
+region <- readRDS("02_transformed_data/user_grid/user_region1.rds")
 ### End of creating user extrapolation region object
 ### --------------------------------------------------
 
 ### Quick plots of the process for method 1
-png('02_transformed_data/user_grid/user_region.png', width=7, height=7, units='in', res=200)
+png('02_transformed_data/user_grid/user_region1test.png', width=7, height=7, units='in', res=200)
 par(mfrow=c(2,2))
 with(region_extent, plot(long, lat, main='Extent in points in LL'))
 plot(region_polygon, main='Polygon in UTM', axes=TRUE)
