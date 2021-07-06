@@ -137,6 +137,8 @@ fit = fit_model( settings = settings,
                  working_dir=workdir )
 
 save(fit, file=paste0(workdir,"/fit.RData"))
+load(paste0(workdir,"/fit.RData"))
+
 
 # -- plot ------------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -171,6 +173,9 @@ fit_sign = fit_model( settings = settings,
                  working_dir=workdir )
 
 save(fit_sign, file=paste0(workdir,"/fit_sign.RData"))
+
+load(paste0(workdir,"/fit_sign.RData"))
+
 
 plot( fit_sign,
       Yrange=c(NA,NA),working_dir =paste0(workdir,"/"))
@@ -213,20 +218,11 @@ ocean <- readOGR(coast_shapefile)
 head(Q1_ik)
 
 
-# Highligting significant phi effects -------------------------------------
-# -------------------------------------------------------------------------
+
+# Plot covariates effects -------------------------------------------------
 
 phi <- fit$Report$Phi1_sk
 
-for (i in 1:dim(phi)[1]){
-  for (j in 1:dim(phi)[2]){
-    if(pvalue[i,j]>0.05){phi[i,j]=NA}else{phi[i,j]==phi[i,j]}
-    
-  }
-}
-
-
-# Plot covariates effects -------------------------------------------------
 
 bathy.dat<-read.table('C:/Users/Maxime/Documents/Git/Flat_fish_2021/01_data/bathyEBS/BeringDepth.txt',sep='') 
 names(bathy.dat)<-c('lon','lat','depth')
@@ -234,6 +230,87 @@ names(bathy.dat)<-c('lon','lat','depth')
 bathy.dat$depth[bathy.dat$depth>0]<-NA#Avoid points above water
 head(bathy.dat)
 bathy.mat<- matrix(bathy.dat$depth,nrow=length(unique(bathy.dat$lon)),ncol=length(unique(bathy.dat$lat)))[,order(unique(bathy.dat$lat))]
+
+
+png(paste(workdir,"/Covariates_effect",'.png',sep=''), height = 8, width = 12, units = 'in', res=600)
+par(mfrow=c(2,3))
+#par(mar=c(4.5, 4.5, 0.5, 0.5))
+name_effect <- c("ColdEarly","WarmEarly","ColdInt","WarmInt","ColdLate","WarmLate")#"ColdLate","WarmLate")
+Xplot <- pvaluenNA#fit$Report$Phi1_sk[,]
+CP<- c("cold","warm","cold","warm","cold","warm")
+Season <- c("early","early","int","int","late","late")
+Season <- as.character(Season)
+
+for (k in c(1,3,5,2,4,6)){
+  
+  x <- Season[k]
+  y<- CP[k]
+  data_obs <- as_tibble(CPUE_catchability) %>% dplyr:: filter(Season == x, CP==y)
+  
+  x <- as.data.frame(MapDetails_List$PlotDF)
+  PlotDF1 = subset(x,Include==TRUE)
+  
+  unique(x$Include)
+  PlotDF1 <- as.data.frame(PlotDF1)
+  coords2 = cbind(PlotDF1$Lon,PlotDF1$Lat)
+  coords2 = coords2[coords2[,1]<0,]
+  P2 = SpatialPoints(coords2)
+  P3 = SpatialPoints(coords2)
+  
+  rast <- raster(ncol=50,nrow=50)
+  extent(rast) <- extent(coords2)
+  col=colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan",
+                         "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))#colorRampPalette( c('blue','red', 'yellow'), bias=1)
+  
+  breakpoints  <-  seq(min( fit$Report$Phi1_sk[PlotDF1$x2i,]),round(max(fit$Report$Phi1_sk[PlotDF1$x2i,]),digits=1),(round(max(fit$Report$Phi1_sk[PlotDF1$x2i,]),digits=1)-min(fit$Report$Phi1_sk[PlotDF1$x2i,]))/70)
+  range(fit$Report$Phi1_sk)
+  
+  P2$data =  (phi[,k])[PlotDF1$x2i]
+  rast.temp <- rasterize(P2, rast, P2$data, fun = mean)
+  
+
+  
+  plot(ocean,col="dark gray",axes=F,xlim=c(-180,-158),ylim=c(54,62),main=name_effect[k])
+ 
+  image(rast.temp,col=col(length(breakpoints)-1),axes=TRUE,breaks=breakpoints,
+        add=T,xlim=c(-180,-158),ylim=c(54,62))
+  contour(unique(bathy.dat$lon),sort(unique(bathy.dat$lat)),bathy.mat,levels=-c(200,100,50),labcex=0.4,col='black',add=T)
+  points(data_obs$long,data_obs$lat, pch=3)
+  
+  box()
+  legend_x=c(0.1,0.2)
+  legend_y=c(0.05,0.3)
+  cex.legend=0.4
+  xl = (1-legend_x[1])*par('usr')[1] + (legend_x[1])*par('usr')[2]
+  xr = (1-legend_x[2])*par('usr')[1] + (legend_x[2])*par('usr')[2]
+  yb = (1-legend_y[1])*par('usr')[3] + (legend_y[1])*par('usr')[4]
+  yt = (1-legend_y[2])*par('usr')[3] + (legend_y[2])*par('usr')[4]
+  if( diff(legend_y) > diff(legend_x) ){
+    align = c("lt","rb")[2]
+    gradient = c("x","y")[2]
+  }else{
+    align = c("lt","rb")[1]
+    gradient = c("x","y")[1]
+  }  
+  
+  plotrix::color.legend(xl=xl, yb=yb, xr=xr, yt=yt, legend=round(seq(min(breakpoints),max(breakpoints),length=4),2),
+                        rect.col=col(length(breakpoints)-1), cex=0.6, align=align, gradient=gradient)
+  
+  
+  
+}
+
+dev.off()
+
+# Highligting significant phi effects -------------------------------------
+# -------------------------------------------------------------------------
+
+for (i in 1:dim(phi)[1]){
+  for (j in 1:dim(phi)[2]){
+    if(pvalue[i,j]>0.05){phi[i,j]=NA}else{phi[i,j]==phi[i,j]}
+    
+  }
+}
 
 
 png(paste(workdir,"/Covariates_significanteffect",'.png',sep=''), height = 8, width = 12, units = 'in', res=600)
@@ -261,7 +338,7 @@ for (k in c(1,3,5,2,4,6)){
   P2 = SpatialPoints(coords2)
   P3 = SpatialPoints(coords2)
   
-  rast <- raster(ncol=60,nrow=50)
+  rast <- raster(ncol=50,nrow=50)
   extent(rast) <- extent(coords2)
   col=colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan",
                          "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))#colorRampPalette( c('blue','red', 'yellow'), bias=1)
