@@ -7,6 +7,9 @@ rm(list=ls())
 library(reshape2)
 library(dplyr)
 library(ggplot2)
+library(sp)
+library(sf)
+library(metR)
 
 # Load Data ---------------------------------------------------------------
 DateFile <- "03_model/user_grid"
@@ -77,7 +80,7 @@ D_warm_gut <- left_join(D_warm_gut, loc, by= "knot")
 D_cold_gut <- left_join(D_cold_gut, loc, by= "knot")
 
 # - Calculate abundances --------------------------------------------------
-A_g <- fit$spatial_list$a_gl*fit$spatial_list$a_gl*1000
+A_g <- fit$spatial_list$a_gl
 A_g <- cbind(A_g, seq(1,n_knot,1))
 colnames(A_g) <- c("area_km2","knot")
 A_g <- as.data.frame(A_g)
@@ -222,6 +225,7 @@ dev.off()
 
 
 
+# -------------------------------------------------------------------------
 # Plot warm and cold spatial map -----------------------------------------
 # -------------------------------------------------------------------------
 
