@@ -11,6 +11,7 @@ library(sp) # 1.4.4
 library(sf) # 0.9.6
 getwd()
 
+rm(list=ls())
 shape_path <- "C:/Users/Maxime/Documents/Git/Flat_fish/Pheno-flatfish/ADFGv2/shapefile/"
 coast_shapefile <- paste(shape_path, "ne_50m_land.shp", sep="")
 ocean <- readOGR(coast_shapefile)
@@ -26,8 +27,10 @@ bathy.mat<- matrix(bathy.dat$depth,nrow=length(unique(bathy.dat$lon)),ncol=lengt
 file_output <- "02_transformed_data/observer"
 load(paste0(file_output,"/CPUE_catchability_adfg.RData"))
 ### Use this to draw points around your data
-
-plot(CPUE_catchability$long, CPUE_catchability$lat)
+min(y.data)
+y.data<- c(CPUE_catchability$lat,62,54)
+x.data<- c(CPUE_catchability$long,-168,-175)
+plot(x.data, y.data)
 plot(ocean,col="dark gray",axes=F,xlim=c(-180,-158),ylim=c(54,62),add=TRUE)
 contour(unique(bathy.dat$lon),sort(unique(bathy.dat$lat)),bathy.mat,levels=-c(200,100,50),labcex=0.4,col='black',add=T)
 
