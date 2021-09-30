@@ -40,7 +40,7 @@ library(VAST)
 getwd()
 DateFile <- "03_model/EBS_grid"
 #setwd(DateFile)
-outputs_file <- "04_outputs/EBS_grid/EnvCxSeason/survey" 
+outputs_file <- "04_outputs/EBS_grid/EnvCxSeason/survey/2001" 
 
 
 # PREPARE DATA ----------------------------------------------------------
@@ -62,7 +62,7 @@ colnames(Data_Geostat)<-c("Sci", "Year","TowID" , "Lat", "Lon","Wt", "AreaSwept_
 library(sp)
 
 # ^ Number of knot/stations -----------------------------------------------
-n_x = c(30, 50, 75, 100, 150, 200, 300)[4]
+n_x = c(30, 50, 75, 100, 150, 200, 300)[5]
 
 # ^ Output from Calc_Kmeans with knots for a triangulated mesh ------------
 # ^ Calc_Kmeans determines the location for a set of knots for ------------
@@ -81,9 +81,8 @@ Extrapolation_List_EBS  = FishStatsUtils::make_extrapolation_info(Region=Region_
 
 # - Settings ----------------------------------------------------------------
 
-settings = make_settings( n_x = 100,
+settings = make_settings( n_x = n_x,
                           Region = "Eastern_Bering_Sea",
-                          fine_scale=FALSE,
                           purpose = "index2",
                           bias.correct = FALSE,
                           ObsModel = c(2,0),
@@ -96,7 +95,7 @@ settings$strata.limits
 # and spatio-temporal effect ----------------------------------------------
 # -------------------------------------------------------------------------
 
-settings$FieldConfig = c("Omega1"=1, "Epsilon1"=1, "Omega2"=1, "Epsilon2"=1) 
+settings$FieldConfig = c("Omega1"=1, "Epsilon1"=0, "Omega2"=1, "Epsilon2"=1) 
 
 # * * structure on parameters among years --------------------------------------------------------------------
 # strucutre for intercetps ie spatio temporal varition across time, uisng input
@@ -112,7 +111,7 @@ settings$OverdispersionConfig = c("Eta1"=0, "Eta2"=0)
 # -- Covariates -----------------------------------------------------------
 settings$Options["report_additional_variables"]=FALSE
 
-check_fit(par)
+check_fit(fit)
 
 # -- run model
 # -------------------------------------------------------------------------
@@ -122,6 +121,7 @@ Data_Geostat <- Data_Geostat %>% filter(Year > 2000) %>% filter(Year < 2019 )
 
 # RUN MODEL ---------------------------------------------------------------
 names(Data_Geostat)
+Data_Geostat %>% filter(Year>2012)
 workdir <- paste0(getwd(),"/",outputs_file)
 
 
