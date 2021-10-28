@@ -54,7 +54,7 @@ settings = make_settings( n_x = 100,
                           ObsModel = c(1,4),
                           knot_method='grid')
 
-
+fit$settings$knot_method
 
 # - Switch off estimation of random effect for spatial effect  ---------------
 # and spatio-temporal effect ----------------------------------------------
@@ -208,7 +208,7 @@ pvaluenNA <- ifelse(pvalue>0.05, pvalue==NA, pvalue)
 # covariates so I made the plot by hand here
 # -------------------------------------------------------------------------
 getwd()
-MapDetails_List <- FishStatsUtils:: make_map_info( "Region"=settings$Region,spatial_list = fit$spatial_list, "NN_Extrap"=fit$spatial_list$PolygonList$NN_Extrap,                                                     
+MapDetails_List <- FishStatsUtils:: make_map_info( "Region"=fit$settings$Region,spatial_list = fit$spatial_list, "NN_Extrap"=fit$spatial_list$PolygonList$NN_Extrap,                                                     
                                                    "Extrapolation_List"=fit$extrapolation_list ,fine_scale = FALSE)
 
 shape_path <- "C:/Users/Maxime/Documents/Git/Flat_fish/Pheno-flatfish/ADFGv2/shapefile/"
@@ -222,7 +222,7 @@ head(Q1_ik)
 # Plot covariates effects -------------------------------------------------
 
 phi <- fit$Report$Phi1_sk
-
+dim(phi)
 
 bathy.dat<-read.table('C:/Users/Maxime/Documents/Git/Flat_fish_2021/01_data/bathyEBS/BeringDepth.txt',sep='') 
 names(bathy.dat)<-c('lon','lat','depth')
@@ -248,6 +248,7 @@ for (k in c(1,3,5,2,4,6)){
   data_obs <- as_tibble(CPUE_catchability) %>% dplyr:: filter(Season == x, CP==y)
   
   x <- as.data.frame(MapDetails_List$PlotDF)
+  dim(x)
   PlotDF1 = subset(x,Include==TRUE)
   
   unique(x$Include)
