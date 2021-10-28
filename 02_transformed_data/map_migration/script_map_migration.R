@@ -7,6 +7,7 @@ library(tidyr)
 library(concaveman)
 library(sf)
 rm(list=ls())
+theme_set(theme_bw())
 
 # Define map AK -----------------------------------------------------------
 
@@ -282,14 +283,14 @@ y <- c(62.5,62.5,62.5)
 Label_shelf <- cbind(bathy_sheld,x,y)
 
 library(devtools)
-install_github("thomasp85/patchwork")
+#install_github("thomasp85/patchwork")
 library(patchwork)
 
 dCE <- data.frame(x=c(-173.2),y=c(58),vx=c(2),vy=c(0))
 bathy_shelf_CE <- bind_rows(bathy_outer %>% mutate(Effect="High"),bathy_middle%>% mutate(Effect="Medium"),bathy_inner2%>% mutate(Effect="Low"))
 
 qCE <-  ggplot()+
-  geom_text(data=bathy_sheld,aes(x,y,label=shelf),color = "brown")+
+  geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
   geom_sf(data = bathy_shelf_CE,aes(fill= Effect),alpha=0.5,show.legend = FALSE )+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                      breaks=c("High", "Medium","Low"))+
@@ -302,7 +303,7 @@ qCE <-  ggplot()+
 bathy_shelf_CI <- bind_rows(bathy_outer %>% mutate(Effect="Medium"),bathy_middle%>% mutate(Effect="High"),bathy_inner2%>% mutate(Effect="High"))
 dCI <- data.frame(x=c(-168.5,-163.5),y=c(58,58.5),vx=c(5,-5),vy=c(0,0))
 qCI <-  ggplot()+
-  geom_text(data=bathy_sheld,aes(x,y,label=shelf),color = "brown")+
+  geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
   geom_sf(data = bathy_shelf_CI,aes(fill= Effect),alpha=0.5,show.legend = FALSE )+
   scale_fill_manual(values=c(col_h, col_m,col_l)
                   )+
@@ -314,7 +315,7 @@ qCI <-  ggplot()+
 bathy_shelf_CL <- bind_rows(bathy_outer %>% mutate(Effect="Low"),bathy_middle%>% mutate(Effect="High"),bathy_inner2%>% mutate(Effect="Medium"))
 dCL <- data.frame(x=c(-163.5),y=c(58.5),vx=c(-5),vy=c(0))
 qCL <-  ggplot()+
-  geom_text(data=bathy_sheld,aes(x,y,label=shelf),color = "brown")+
+  geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
   geom_sf(data = bathy_shelf_CL,aes(fill= Effect),alpha=0.5,show.legend = FALSE)+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                     breaks=c("High", "Medium","Low"))+
@@ -328,7 +329,7 @@ qCL <-  ggplot()+
 bathy_shelf_WE <- bind_rows(bathy_outer %>% mutate(Effect="High"),bathy_middle%>% mutate(Effect="High"),bathy_inner2%>% mutate(Effect="Low"))
 dWE <- data.frame(x=c(-173.2),y=c(58),vx=c(4),vy=c(0))
 qWE <-  ggplot()+
-  geom_text(data=bathy_sheld,aes(x,y,label=shelf),color = "brown")+
+  geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
   geom_sf(data = bathy_shelf_WE,aes(fill= Effect),alpha=0.5,show.legend = FALSE)+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                     breaks=c("High", "Medium","Low"))+
@@ -340,7 +341,7 @@ qWE <-  ggplot()+
 bathy_shelf_WI <- bind_rows(bathy_outer %>% mutate(Effect="Low"),bathy_middle%>% mutate(Effect="High"),bathy_inner2%>% mutate(Effect="Medium"))
 dWI <- data.frame(x=c(-163.5),y=c(58.5),vx=c(-5),vy=c(0))
 qWI <-  ggplot()+
-  geom_text(data=bathy_sheld,aes(x,y,label=shelf),color = "brown")+
+  geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
   geom_sf(data = bathy_shelf_WI,aes(fill= Effect),alpha=0.5,show.legend = FALSE)+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                     breaks=c("High", "Medium","Low"))+
@@ -353,7 +354,7 @@ qWI <-  ggplot()+
 bathy_shelf_WL <- bind_rows(bathy_outer %>% mutate(Effect="High"),bathy_middle%>% mutate(Effect="Medium"),bathy_inner2%>% mutate(Effect="Low"))
 dWL <- data.frame(x=c(-169.5),y=c(58.5),vx=c(-4),vy=c(0))
 qWL <-  ggplot()+
-  geom_text(data=bathy_sheld,aes(x,y,label=shelf),color = "brown")+
+  geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
   geom_sf(data = bathy_shelf_WL,aes(fill= Effect),alpha=0.5)+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                     breaks=c("High", "Medium","Low"))+
@@ -365,5 +366,5 @@ qWL <-  ggplot()+
  
 (qCE | qCI | qCL)/ (qWE | qWI | qWL)
 
-ggsave(file= "02_transformed_data/map_migration/map_hyp.png")
+ggsave(file= "02_transformed_data/map_migration/map_hyp2.png")
 
