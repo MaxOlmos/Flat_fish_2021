@@ -83,12 +83,9 @@ Label_shelf <- cbind(bathy_sheld,x,y)
 
 
 # survey polygons ---------------------------------------------------------
-load("04_outputs/EBS_grid/EnvCxSeason/survey/fit.RData")
-fit_s <- fit
-survey <- fit_s$data_frame %>% filter(t_i==2001)
-concav_survey <-st_as_sf(survey, coords = c("Lon_i", "Lat_i"),crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0") %>% 
-  concaveman::concaveman(concavity = 2.05)
-
+shapefile <- st_read("02_transformed_data/EBSshelf/EBSshelf.shp")
+crs_ref <- "+proj=longlat +ellps=WGS84  +datum=WGS84 +no_defs"
+EBS <- st_transform(shapefile,crs=crs_ref)
 # Plots -------------------------------------------------------------------
 
 
@@ -172,12 +169,12 @@ qWL <-  ggplot()+
 
 (qCE | qCI | qCL)/ (qWE | qWI | qWL)
 
-ggsave(file= "02_transformed_data/map_migration/map_hyp2.png")
+ggsave(file= "02_transformed_data/map_migration/map_hyp2_test.png")
 
 
 
 
-# MAP Abundances --------------------------------------------------------------
+# MAP Biomasss --------------------------------------------------------------
 # -------------------------------------------------------------------------
 
 
@@ -242,17 +239,17 @@ x <- c(-178,-173.5, -169)
 y <- c(62.5,62.5,62.5)
 
 Label_shelf <- cbind(bathy_sheld,x,y)
-size_row <- 3
-size_row2 <- c(3,1)
+size_row <- 1
+size_row2 <- c(2,1)
 size_text <- 1
 
 
-dCE <- data.frame(x=c(-173.2),y=c(58),vx=c(2),vy=c(0))
-bathy_shelf_CE <- bind_rows(bathy_outer %>% mutate(Abundance="High"),bathy_middle%>% mutate(Abundance="Medium"),bathy_inner2%>% mutate(Abundance="Low"))
+dCE <- data.frame(x=c(-174),y=c(58),vx=c(3),vy=c(0))
+bathy_shelf_CE <- bind_rows(bathy_outer %>% mutate(Biomass="High"),bathy_middle%>% mutate(Biomass="Medium"),bathy_inner2%>% mutate(Biomass="Low"))
 
 qCE <-  ggplot()+
   geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
-  geom_sf(data = bathy_shelf_CE,aes(fill= Abundance),color=NA,alpha=0.5,show.legend = FALSE )+
+  geom_sf(data = bathy_shelf_CE,aes(fill= Biomass),color=NA,alpha=0.5,show.legend = FALSE )+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                     breaks=c("High", "Medium","Low"))+
   geom_sf(data = world,fill="black",color=NA) + 
@@ -261,12 +258,12 @@ qCE <-  ggplot()+
   ggtitle("Cold x Early")
 
 
-bathy_shelf_CI <- bind_rows(bathy_outer %>% mutate(Abundance="Low"),bathy_middle%>% mutate(Abundance="Low"),bathy_inner2%>% mutate(Abundance="High"))
+bathy_shelf_CI <- bind_rows(bathy_outer %>% mutate(Biomass="Low"),bathy_middle%>% mutate(Biomass="Low"),bathy_inner2%>% mutate(Biomass="High"))
 dCI <- data.frame(x=c(-168.5,-163.5),y=c(58,58.5),vx=c(5,-5),vy=c(0,0))
 qCI <-  ggplot()+
   geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
-  geom_sf(data = bathy_shelf_CI,aes(fill= Abundance),color=NA,alpha=0.5,show.legend = FALSE)+
-  geom_sf(data = concav_survey,fill=NA, color="brown",size=0.5) +
+  geom_sf(data = bathy_shelf_CI,aes(fill= Biomass),color=NA,alpha=0.5,show.legend = FALSE)+
+  geom_sf(data = EBS,fill=NA, color="brown",size=0.5) +
   scale_fill_manual(values=c(col_h,col_l), 
                     breaks=c("High","Low")
   )+
@@ -275,11 +272,11 @@ qCI <-  ggplot()+
   geom_segment(data=dCI, mapping=aes(x=x, y=y, xend=x+vx, yend=y+vy), arrow=arrow(type = 'closed'), size=size_row2,alpha=1,col="brown")+
   ggtitle("Cold x Int")
 
-bathy_shelf_CL <- bind_rows(bathy_outer %>% mutate(Abundance="Low"),bathy_middle%>% mutate(Abundance="Medium"),bathy_inner2%>% mutate(Abundance="High"))
+bathy_shelf_CL <- bind_rows(bathy_outer %>% mutate(Biomass="Low"),bathy_middle%>% mutate(Biomass="Medium"),bathy_inner2%>% mutate(Biomass="High"))
 dCL <- data.frame(x=c(-163.5),y=c(58.5),vx=c(-5),vy=c(0))
 qCL <-  ggplot()+
   geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
-  geom_sf(data = bathy_shelf_CL,aes(fill= Abundance),color=NA,alpha=0.5,show.legend = TRUE)+
+  geom_sf(data = bathy_shelf_CL,aes(fill= Biomass),color=NA,alpha=0.5,show.legend = TRUE)+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                     breaks=c("High", "Medium","Low"))+
   geom_sf(data = world,fill="black",color=NA) + 
@@ -289,11 +286,11 @@ qCL <-  ggplot()+
 
 
 
-bathy_shelf_WE <- bind_rows(bathy_outer %>% mutate(Abundance="Medium"),bathy_middle%>% mutate(Abundance="High"),bathy_inner2%>% mutate(Abundance="Medium"))
+bathy_shelf_WE <- bind_rows(bathy_outer %>% mutate(Biomass="Medium"),bathy_middle%>% mutate(Biomass="High"),bathy_inner2%>% mutate(Biomass="Medium"))
 dWE <- data.frame(x=c(-173.2),y=c(58),vx=c(4),vy=c(0))
 qWE <-  ggplot()+
   geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
-  geom_sf(data = bathy_shelf_WE,aes(fill= Abundance),color=NA,alpha=0.5,show.legend = FALSE)+
+  geom_sf(data = bathy_shelf_WE,aes(fill= Biomass),color=NA,alpha=0.5,show.legend = FALSE)+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                     breaks=c("High", "Medium","Low"))+
   geom_sf(data = world,fill="black",color=NA) + 
@@ -301,12 +298,12 @@ qWE <-  ggplot()+
   geom_segment(data=dWE, mapping=aes(x=x, y=y, xend=x+vx, yend=y+vy), arrow=arrow(type = 'closed'), size=c(3),alpha=1,col="brown")+
   ggtitle("Warm X Early")
 
-bathy_shelf_WI <- bind_rows(bathy_outer %>% mutate(Abundance="Low"),bathy_middle%>% mutate(Abundance="High"),bathy_inner2%>% mutate(Abundance="High"))
+bathy_shelf_WI <- bind_rows(bathy_outer %>% mutate(Biomass="Low"),bathy_middle%>% mutate(Biomass="High"),bathy_inner2%>% mutate(Biomass="High"))
 dWI <- data.frame(x=c(-163.5),y=c(58.5),vx=c(-5),vy=c(0))
 qWI <-  ggplot()+
   geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
-  geom_sf(data = bathy_shelf_WI,aes(fill= Abundance),color=NA,alpha=0.5,show.legend = FALSE)+
- geom_sf(data = concav_survey,fill=NA, color="brown",size=0.5) +
+  geom_sf(data = bathy_shelf_WI,aes(fill= Biomass),color=NA,alpha=0.5,show.legend = FALSE)+
+ geom_sf(data = EBS,fill=NA, color="brown",size=0.5) +
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                     breaks=c("High", "Medium","Low"))+
   geom_sf(data = world,fill="black",color=NA) + 
@@ -318,11 +315,11 @@ qWI <-  ggplot()+
 colors <- c("High" = "blue", "Medium"=col_m,"Low"=col_l)
 
 
-bathy_shelf_WL <- bind_rows(bathy_outer %>% mutate(Abundance="High"),bathy_middle%>% mutate(Abundance="High"),bathy_inner2%>% mutate(Abundance="Medium"))
+bathy_shelf_WL <- bind_rows(bathy_outer %>% mutate(Biomass="Medium"),bathy_middle%>% mutate(Biomass="High"),bathy_inner2%>% mutate(Biomass="Medium"))
 dWL <- data.frame(x=c(-169.5),y=c(58.5),vx=c(-4),vy=c(0))
 qWL <-  ggplot()+
   geom_text(data=bathy_sheld,aes(x,y,label=Shelf),color = "brown")+
-  geom_sf(data = bathy_shelf_WL,aes(fill= Abundance),color=NA,alpha=0.5,show.legend = FALSE)+
+  geom_sf(data = bathy_shelf_WL,aes(fill= Biomass),color=NA,alpha=0.5,show.legend = FALSE)+
   scale_fill_manual(values=c(col_h, col_m,col_l), 
                   breaks=c("High", "Medium","Low"))+
   geom_sf(data = world,fill="black",color=NA) + 
@@ -330,8 +327,14 @@ qWL <-  ggplot()+
   geom_segment(data=dWL, mapping=aes(x=x, y=y, xend=x+vx, yend=y+vy), arrow=arrow(type = 'closed'), size=size_row,alpha=1,col="brown")+
   ggtitle("Warm x Late") 
 
-(qCE | qCI | qCL)/ (qWE | qWI | qWL)
+p <- (qCE | qCI | qCL)/ (qWE | qWI | qWL)
 
-ggsave(file= "02_transformed_data/map_migration/map_hyp_ab.png")
+#ggsave(file= "02_transformed_data/map_migration/map_hyp_ab.png")
+ggsave("02_transformed_data/map_migration/map_hyp_ab.png",plot=p,
+       width = 30,
+       height = 20,
+       units = "cm")
+
+
 
 
