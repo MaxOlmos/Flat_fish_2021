@@ -46,3 +46,4 @@ vignettes/*.pdf
 *.png
 /*04_outputs
 *.RData
+02_transformed_data/sex/For_Max.csv
