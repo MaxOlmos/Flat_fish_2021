@@ -1,3 +1,5 @@
+rm(list=ls())
+
 # Load packages -----------------------------------------------------------
 # -------------------------------------------------------------------------
 library(VAST)
@@ -15,8 +17,12 @@ library(reshape2)
 getwd()
 
 # Fisheries ---------------------------------------------------------------
-load("04_outputs/user_grid/EnvCxSeason/c(3,3,3,3,2,2)_grid1/fit.RData")
-fit_f <- fit
+load("04_outputs/user_grid/EnvCxSeason/knot_method=grid/c(3,3,3,3,2,2)/fit.RData")
+fit_f0 <- fit
+
+load("04_outputs/user_grid/EnvCxSeason/knot_method=grid/c(3,3,3,3,2,2)_grid1/fit.RData")
+fit_f1 <- fit
+
 
 
 # Overlap steps -----------------------------------------------------------
@@ -30,7 +36,7 @@ fit_f <- fit
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
 shapefile <- st_read(paste0(getwd(),"/02_transformed_data/EBSshelf/EBSshelf.shp"))
-plot(shapefile$geometry)
+#plot(shapefile$geometry)
 st_crs(shapefile)
 
 shapefile <- st_transform(shapefile, "+proj=longlat +datum=WGS84")
@@ -52,6 +58,7 @@ survey <- fit_s$data_frame
 # -------------------------------------------------------------------------
 # - 2 Get the extrapolation-grid you’re using, fit$spatial_list$latlon_g----
 # -------------------------------------------------------------------------
+fit_f <- fit_f0
 
 knots_latlong <- as.data.frame(fit_f$spatial_list$latlon_g)
 knots <- c(1:100)
@@ -61,26 +68,46 @@ knots_sf <- st_as_sf(knots_latlong, coords = c('Lon', 'Lat'), crs = "+proj=longl
 concav_survey2 <-st_as_sf(survey, coords = c("Lon_i", "Lat_i"),crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0") %>% 
   concaveman::concaveman(concavity = 2)
 
-w <- ggplot() +
-  geom_sf(data = concav_survey2,fill=NA, size=2,color="pink")+
-  geom_sf(data = knots_sf,color="red")+
+
+
+
+a <- ggplot() + 
   geom_sf(data = shapefile,fill=NA,color="blue") + 
   ggtitle("EBS") +
-  geom_point(survey,mapping=aes(x=Lon_i,y=Lat_i),color="blue")+
-  geom_sf(data = world,fill="black",color=NA) + coord_sf(xlim=c(-180,-155), ylim=c(54,63.5),expand = FALSE)
+  #geom_point(survey,mapping=aes(x=Lon_i,y=Lat_i),color="lightblue")+
+  geom_sf(data = world,fill="black",color=NA) +
+  geom_point(fit_f$data_frame,mapping=aes(x=Lon_i,y=Lat_i),color="green3",size=3,shape=3)+
+  coord_sf(xlim=c(-180,-155), ylim=c(54,63.5),expand = FALSE)
+
+
+png(paste('Map_Data_EBS','.png',sep=''), height =14 , width = 20, units = 'cm', res=500)#, res=500)
+a
+dev.off()
+
+
+w <- ggplot() +
+  # geom_sf(data = concav_survey2,fill=NA, size=2,color="pink")+
+ 
+  geom_sf(data = shapefile,fill=NA,color="blue") + 
+  ggtitle("EBS") +
+  #geom_point(survey,mapping=aes(x=Lon_i,y=Lat_i),color="lightblue")+
+  geom_sf(data = world,fill="black",color=NA) +
+  geom_sf(data = knots_sf,color="red",size=2)+
+  coord_sf(xlim=c(-180,-155), ylim=c(54,63.5),expand = FALSE)
 
 
 
-png(paste('EBSarea','.png',sep=''), height =14 , width = 20, units = 'cm', res=500)#, res=500)
-w
+png(paste('EBSarea_mesh1','.png',sep=''), height =14 , width = 20, units = 'cm', res=500)#, res=500)
+w+ geom_point(fit_f$data_frame,mapping=aes(x=Lon_i,y=Lat_i),color="green3",size=3,shape=3)
 dev.off()
 
 
 # Check data vs knot distribution
-w+ geom_point(fit_f$data_frame,mapping=aes(x=Lon_i,y=Lat_i),color="green3",size=2)
+w
+
 u <- ggplot() +
-geom_sf(data = knots_sf,color="red")+
-geom_point(fit_f$data_frame,mapping=aes(x=Lon_i,y=Lat_i),color="green3",size=2) 
+  geom_sf(data = knots_sf,color="red")+
+  geom_point(fit_f$data_frame,mapping=aes(x=Lon_i,y=Lat_i),color="green3",size=2) 
 u
 
 # -------------------------------------------------------------------------
@@ -89,10 +116,10 @@ u
 # -------------------------------------------------------------------------
 
 dim(knots_sf)
-pnts <- st_difference( knots_sf,concav_survey2)
+pnts <- st_difference( knots_sf,shapefile)
 pnts <- st_transform(pnts, "+proj=longlat +datum=WGS84")
 q <- ggplot() +
-  geom_sf(data = concav_survey2,fill=NA, size=2,color="pink")+
+  #  geom_sf(data = concav_survey2,fill=NA, size=2,color="pink")+
   geom_sf(data = pnts,color="red")+
   geom_sf(data = shapefile,fill=NA,color="blue") + 
   ggtitle("EBS") +
@@ -114,8 +141,8 @@ Index_g <- Index_g %>% replace(is.na(.),1)
 # -------------------------------------------------------------------------
 
 # -- fisheries CPUE --------------------------------------------------------
-load("04_outputs/user_grid/EnvCxSeason/c(3,3,3,3,2,2)_grid1/fit.RData")
-fit_f <- fit
+load("04_outputs/user_grid/EnvCxSeason/c(3,3,3,3,2,2)/fit.RData")
+fit_f <- fit_f0 
 dim(fit_f$Report$D_gct)
 fit$data_list$n_i
 fit_f$Report$Phi1_ik
@@ -159,7 +186,7 @@ for ( t in 1:length(cold)){
   for ( u in 1 :length(cold_season)){
     for ( g in 1:n_knot){
       D_cold_gut[g,u,t] <- fit_f$Report$D_gct[g,1,cold[t]] * 
-       # a_k[g,1] *
+        # a_k[g,1] *
         exp(fit_f$Report$Phi1_sk[g,cold_season[u]]) 
     }
   }
@@ -222,7 +249,8 @@ O_uv <- cbind(O_uv, c("warm","cold","warm","cold","warm","cold"))
 O_uv <- O_uv %>% mutate(model="Density_tot")
 colnames(O_uv) <- c("Season", "Overlap", "EnvCond","model")
 
-ggplot() + geom_point(O_uv, mapping=aes(x=Season, y=Overlap, color=EnvCond),size=4)
+ggplot() + geom_point(O_uv, mapping=aes(x=Season, y=Overlap, color=EnvCond),size=4)+
+  scale_color_manual(values=c( "#1E90FF","#FF0000"))
 
 
 
@@ -238,22 +266,22 @@ D_cold_gu <- array(NA,dim=c(n_knot,length(cold_season)))
 D_warm_gu <- array(NA,dim=c(n_knot,length(warm_season)))
 
 
-  for ( u in 1 :length(cold_season)){
-    for ( g in 1:n_knot){
-      D_cold_gu[g,u] <- exp(fit_f$Report$Omega1_gc[g,1])*
-        #a_k[g,1] * 
-        exp(fit_f$Report$Phi1_sk[g,cold_season[u]]) 
-    }
+for ( u in 1 :length(cold_season)){
+  for ( g in 1:n_knot){
+    D_cold_gu[g,u] <- exp(fit_f$Report$Omega1_gc[g,1])*
+      #a_k[g,1] * 
+      exp(fit_f$Report$Phi1_sk[g,cold_season[u]]) 
   }
+}
 
 
-  for ( u in 1 :length(warm_season)){
-    for ( g in 1:n_knot){
-      D_warm_gu[g,u] <- exp(fit_f$Report$Omega1_gc[g,1])*
-        #a_k[g,1]* 
-        exp(fit_f$Report$Phi1_sk[g,warm_season[u]])  
-    }
+for ( u in 1 :length(warm_season)){
+  for ( g in 1:n_knot){
+    D_warm_gu[g,u] <- exp(fit_f$Report$Omega1_gc[g,1])*
+      #a_k[g,1]* 
+      exp(fit_f$Report$Phi1_sk[g,warm_season[u]])  
   }
+}
 
 
 # I_uv: Total abundance acrross space and season and env conditions -------------

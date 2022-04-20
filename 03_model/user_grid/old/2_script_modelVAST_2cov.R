@@ -20,8 +20,6 @@ rm(list=ls())
 getwd()
 # Load package ------------------------------------------------------------
 # Install FishStatsUtils from CRAN
-update.packages("VAST")
-version()
 
 library(VAST)
 library(TMB)
@@ -33,36 +31,30 @@ library(splines)
 library(FishStatsUtils)
 library(devtools)
 # Install package
-install_github("james-thorson/VAST", INSTALL_opts="--no-staged-install")
+#install_github("james-thorson/VAST", INSTALL_opts="--no-staged-install")
 # Load package
 library(VAST)
-version= get_latest_version(package="VAST")
 
 getwd()
 DateFile <- "03_model/user_grid"
 #setwd(DateFile)
-version= get_latest_version(package="VAST")
+
 
 # PREPARE DATA ----------------------------------------------------------
 # -------------------------------------------------------------------------
 load(file="02_transformed_data/observer/CPUE_catchability_adfg.RData")
 user_region <- readRDS('02_transformed_data/user_grid/user_region1.rds')
-plot(user_region)
-plot(user_region$Lon,user_region$Lat)
 #user_region$Area_km2 <- 1
-
 # - Settings ----------------------------------------------------------------
-settings = make_settings( n_x = 150,
+settings = make_settings( n_x = 100,
                           Region = "User",
                           fine_scale=FALSE,
                           purpose = "index2",
                           bias.correct = FALSE,
                           ObsModel = c(1,4),
-                         # knot_method='grid'
-                         knot_method='samples')
+                          knot_method='grid')
 
-??make_settings
-#fit$settings$knot_method
+
 
 # - Switch off estimation of random effect for spatial effect  ---------------
 # and spatio-temporal effect ----------------------------------------------
@@ -72,6 +64,7 @@ settings = make_settings( n_x = 150,
 # because variance paramters are apporaching zero
 settings$FieldConfig[1,2]<-0
 settings$FieldConfig[2,1]<-0
+#settings$FieldConfig[1,1]<-0
 
 
 # RUN MODEL ---------------------------------------------------------------
@@ -82,7 +75,8 @@ settings$FieldConfig[2,1]<-0
 # - Model : SeasonXCP covariate -----------------------------------------------------
 # -------------------------------------------------------------------------
 getwd()
-outputs_file <- "04_outputs/user_grid/EnvCxSeason/knot_method=samples_150knots/c(3,3,3,3,2,2)_grid1" 
+cov_struct <- "c(2,2,3,3,3,3,2,2)"
+outputs_file <- paste0("04_outputs/user_grid/EnvCxSeason+EnvC/",cov_struct,"_grid1" )
 
 png(paste0(outputs_file,'/Interractions.png'), height = 6, width = 10, units = 'in', res=600)
 par(mfrow=c(1,2))
@@ -97,13 +91,26 @@ settings$Options["report_additional_variables"]=TRUE
 table(CPUE_catchability$CP)
 
 # Build model matrix
-Q1_formula = ~   CP:Season
+#-- CP
+Q1_formula = ~   CP
 Model_matrix1 = model.matrix( update.formula(Q1_formula, ~.), data=CPUE_catchability)
 Columns_to_keep = which( attr(Model_matrix1,"assign") >0 )
 coefficient_names_Q1 = attr(Model_matrix1,"dimnames")[[2]][Columns_to_keep]
 Q1_ik = Model_matrix1[,Columns_to_keep,drop=FALSE]
 head(Q1_ik)
+CPCold = 1- Q1_ik[,1]
+Q1_ik_CP = cbind(Q1_ik,CPCold)
+apply(Q1_ik_CP,2,sum)
+
+Q1_formula = ~    CP:Season
+Model_matrix1 = model.matrix( update.formula(Q1_formula, ~.), data=CPUE_catchability)
+Columns_to_keep = which( attr(Model_matrix1,"assign") >0 )
+coefficient_names_Q1 = attr(Model_matrix1,"dimnames")[[2]][Columns_to_keep]
+Q1_ik_season = Model_matrix1[,Columns_to_keep,drop=FALSE]
+head(Q1_ik)
 apply(Q1_ik,2,sum)
+
+Q1_ik <- cbind(Q1_ik_CP,Q1_ik_season)
 
 # -- run model
 # -------------------------------------------------------------------------
@@ -117,20 +124,16 @@ fit = fit_model( settings = settings,
                  t_i = CPUE_catchability[,'year'],
                  b_i = CPUE_catchability[,'CPUE.mean'],
                  a_i = rep(1, nrow(CPUE_catchability)),
-                 Q1config_k = c(3,3,3,3,2,2), 
+                 Q1config_k = c(2,2,3,3,3,3,2,2), 
                  Q_ik=Q1_ik,build_model = FALSE,
                  input_grid=user_region,working_dir=workdir)
-
-# plot knots
-knot_loc2 <- as.data.frame(fit$spatial_list$latlon_g)
-plot(knot_loc2$Lon,knot_loc2$Lat, col="red")
 
 
 # Modify Map
 Map = fit$tmb_list$Map
-Map$lambda2_k = rep(factor(NA),6)
+Map$lambda2_k = rep(factor(NA),8)
 #Map$lambda1_k = factor(c(1,1,2,2,3,3))
-Map$log_sigmaPhi1_k <- factor(rep(as.numeric(Map$log_sigmaPhi1_k[1]),6))
+Map$log_sigmaPhi1_k <- factor(c(1,1, rep(as.numeric(2),6)))#c(factor(rep(as.numeric(Map$log_sigmaPhi1_k[1]),6)))
 
 
 fit = fit_model( settings = settings,
@@ -140,32 +143,20 @@ fit = fit_model( settings = settings,
                  b_i = CPUE_catchability[,'CPUE.mean'],
                  a_i = rep(1, nrow(CPUE_catchability)),
                  Map=Map,
-                 Q1config_k =c(3,3,3,3,2,2), 
+                 Q1config_k = c(2,2,3,3,3,3,2,2), 
                  Q_ik=Q1_ik,
                  input_grid=user_region,
                  #getJointPrecision=TRUE,
                  working_dir=workdir )
 
 save(fit, file=paste0(workdir,"/fit.RData"))
-load(paste0(workdir,"/fit.RData"))
-
 
 # -- plot ------------------------------------------------------------------
 # -------------------------------------------------------------------------
-load(paste0("fit.RData"))
 plot( fit,plot_set=c(3,6,7,15,16),
       Yrange=c(NA,NA),working_dir =paste0(workdir,"/"))
 
 
-plot( fit,
-      Yrange=c(NA,NA))
-
-
-dharmaRes = summary(fit, what="residuals", working_dir=workdir)
-
-file.info()
-
-getwd()
 # Test significativity ----------------------------------------------------
 # -------------------------------------------------------------------------
 # Re-run model with getJointPrecision=TRUE --------------------------------
@@ -176,7 +167,7 @@ fit_sign = fit_model( settings = settings,
                  b_i = CPUE_catchability[,'CPUE.mean'],
                  a_i = rep(1, nrow(CPUE_catchability)),
                  Map=Map,
-                 Q1config_k =c(3,3,3,3,2,2), 
+                 Q1config_k = c(2,2,3,3,3,3,2,2), 
                  Q_ik=Q1_ik,
                  input_grid=user_region,
                  getJointPrecision=TRUE,
@@ -184,17 +175,10 @@ fit_sign = fit_model( settings = settings,
 
 save(fit_sign, file=paste0(workdir,"/fit_sign.RData"))
 
-load(paste0(workdir,"/fit_sign.RData"))
-
-
-plot( fit_sign,
-      Yrange=c(NA,NA),working_dir =paste0(workdir,"/"))
-
-
 # Re sample  --------------------------------------------------------------
 sample_true = sample_variable( Sdreport=fit_sign$parameter_estimates$SD,
                                Obj=fit_sign$tmb_list$Obj, variable_name="Phi1_sk" )
-sample_false = sample_variable( Sdreport=fit_sign$parameter_estimates$SD,#n_samples = 30,
+sample_false = sample_variable( Sdreport=fit_sign$parameter_estimates$SD,
                                 Obj=fit_sign$tmb_list$Obj, variable_name="Phi1_sk",sample_fixed=FALSE )
 
 # TRUE
@@ -211,14 +195,13 @@ round(pvalue-pvalue2, 5)
 
 pvaluenNA <- ifelse(pvalue>0.05, pvalue==NA, pvalue)
 
-
 # -------------------------------------------------------------------------
 
 # I did not find the function to plot the spatially response of --------
 # covariates so I made the plot by hand here
 # -------------------------------------------------------------------------
 getwd()
-MapDetails_List <- FishStatsUtils:: make_map_info( "Region"=fit$settings$Region,spatial_list = fit$spatial_list, "NN_Extrap"=fit$spatial_list$PolygonList$NN_Extrap,                                                     
+MapDetails_List <- FishStatsUtils:: make_map_info( "Region"=settings$Region,spatial_list = fit$spatial_list, "NN_Extrap"=fit$spatial_list$PolygonList$NN_Extrap,                                                     
                                                    "Extrapolation_List"=fit$extrapolation_list ,fine_scale = FALSE)
 
 shape_path <- "C:/Users/Maxime/Documents/Git/Flat_fish/Pheno-flatfish/ADFGv2/shapefile/"
@@ -228,22 +211,9 @@ ocean <- readOGR(coast_shapefile)
 head(Q1_ik)
 
 
+# plot pvalue -------------------------------------------------------------
 
-# Plot covariates effects -------------------------------------------------
-
-phi <- fit$Report$Phi1_sk
-fit$Report$Phi1_ik
-dim(phi)
-
-bathy.dat<-read.table('C:/Users/Maxime/Documents/Git/Flat_fish_2021/01_data/bathyEBS/BeringDepth.txt',sep='') 
-names(bathy.dat)<-c('lon','lat','depth')
-
-bathy.dat$depth[bathy.dat$depth>0]<-NA#Avoid points above water
-head(bathy.dat)
-bathy.mat<- matrix(bathy.dat$depth,nrow=length(unique(bathy.dat$lon)),ncol=length(unique(bathy.dat$lat)))[,order(unique(bathy.dat$lat))]
-
-
-png(paste(workdir,"/Covariates_effect",'.png',sep=''), height = 8, width = 12, units = 'in', res=600)
+png(paste(workdir,"/pvalue_significant0.05",'.png',sep=''), height = 8, width = 12, units = 'in', res=600)
 par(mfrow=c(2,3))
 #par(mar=c(4.5, 4.5, 0.5, 0.5))
 name_effect <- c("ColdEarly","WarmEarly","ColdInt","WarmInt","ColdLate","WarmLate")#"ColdLate","WarmLate")
@@ -251,19 +221,17 @@ Xplot <- pvaluenNA#fit$Report$Phi1_sk[,]
 CP<- c("cold","warm","cold","warm","cold","warm")
 Season <- c("early","early","int","int","late","late")
 Season <- as.character(Season)
-
 for (k in c(1,3,5,2,4,6)){
-  
   x <- Season[k]
   y<- CP[k]
   data_obs <- as_tibble(CPUE_catchability) %>% dplyr:: filter(Season == x, CP==y)
   
   x <- as.data.frame(MapDetails_List$PlotDF)
-  dim(x)
   PlotDF1 = subset(x,Include==TRUE)
   
   unique(x$Include)
   PlotDF1 <- as.data.frame(PlotDF1)
+  
   coords2 = cbind(PlotDF1$Lon,PlotDF1$Lat)
   coords2 = coords2[coords2[,1]<0,]
   P2 = SpatialPoints(coords2)
@@ -271,23 +239,24 @@ for (k in c(1,3,5,2,4,6)){
   
   rast <- raster(ncol=50,nrow=50)
   extent(rast) <- extent(coords2)
-  col=colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan",
-                         "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))#colorRampPalette( c('blue','red', 'yellow'), bias=1)
+  col=colorRampPalette(rev(c("#00007F", "blue", "#007FFF", "cyan",
+                             "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000")))#colorRampPalette( c('blue','red', 'yellow'), bias=1)
   
-  breakpoints  <-  seq(min( fit$Report$Phi1_sk[PlotDF1$x2i,]),round(max(fit$Report$Phi1_sk[PlotDF1$x2i,]),digits=1),(round(max(fit$Report$Phi1_sk[PlotDF1$x2i,]),digits=1)-min(fit$Report$Phi1_sk[PlotDF1$x2i,]))/70)
-  range(fit$Report$Phi1_sk)
+  breakpoints  <-  seq(min(Xplot,na.rm=T),round(max(Xplot,na.rm=T),digits=3),(round(max(Xplot,na.rm=T),digits=3)-min( Xplot,na.rm=T))/70)
   
-  P2$data =  (phi[,k])[PlotDF1$x2i]
+  P2$data =  (Xplot[,k])[PlotDF1$x2i]
+  P3$data =  (pvalue[,k])[PlotDF1$x2i]
   rast.temp <- rasterize(P2, rast, P2$data, fun = mean)
-  
-
+  rast.temp3 <- rasterize(P3, rast, P3$data, fun = mean)
   
   plot(ocean,col="dark gray",axes=F,xlim=c(-180,-158),ylim=c(54,62),main=name_effect[k])
- 
+  image(rast.temp3,col="lightgrey",axes=TRUE,
+        add=T,xlim=c(-180,-158),ylim=c(54,62))
+  
   image(rast.temp,col=col(length(breakpoints)-1),axes=TRUE,breaks=breakpoints,
         add=T,xlim=c(-180,-158),ylim=c(54,62))
-  contour(unique(bathy.dat$lon),sort(unique(bathy.dat$lat)),bathy.mat,levels=-c(200,100,50),labcex=0.4,col='black',add=T)
   points(data_obs$long,data_obs$lat, pch=3)
+  
   
   box()
   legend_x=c(0.1,0.2)
@@ -311,11 +280,13 @@ for (k in c(1,3,5,2,4,6)){
   
   
 }
-
 dev.off()
+
 
 # Highligting significant phi effects -------------------------------------
 # -------------------------------------------------------------------------
+
+phi <- fit$Report$Phi1_sk
 
 for (i in 1:dim(phi)[1]){
   for (j in 1:dim(phi)[2]){
@@ -325,17 +296,22 @@ for (i in 1:dim(phi)[1]){
 }
 
 
+# Plot covariates effects -------------------------------------------------
+
+bathy.dat<-read.table('C:/Users/Maxime/Documents/Git/Flat_fish_2021/01_data/bathyEBS/BeringDepth.txt',sep='') 
+names(bathy.dat)<-c('lon','lat','depth')
+
+bathy.dat$depth[bathy.dat$depth>0]<-NA#Avoid points above water
+head(bathy.dat)
+bathy.mat<- matrix(bathy.dat$depth,nrow=length(unique(bathy.dat$lon)),ncol=length(unique(bathy.dat$lat)))[,order(unique(bathy.dat$lat))]
+
+
 png(paste(workdir,"/Covariates_significanteffect",'.png',sep=''), height = 8, width = 12, units = 'in', res=600)
 par(mfrow=c(2,3))
 #par(mar=c(4.5, 4.5, 0.5, 0.5))
 name_effect <- c("ColdEarly","WarmEarly","ColdInt","WarmInt","ColdLate","WarmLate")#"ColdLate","WarmLate")
-Xplot <- pvaluenNA#fit$Report$Phi1_sk[,]
-CP<- c("cold","warm","cold","warm","cold","warm")
-Season <- c("early","early","int","int","late","late")
-Season <- as.character(Season)
 
 for (k in c(1,3,5,2,4,6)){
-  
   x <- Season[k]
   y<- CP[k]
   data_obs <- as_tibble(CPUE_catchability) %>% dplyr:: filter(Season == x, CP==y)
@@ -348,9 +324,8 @@ for (k in c(1,3,5,2,4,6)){
   coords2 = cbind(PlotDF1$Lon,PlotDF1$Lat)
   coords2 = coords2[coords2[,1]<0,]
   P2 = SpatialPoints(coords2)
-  P3 = SpatialPoints(coords2)
   
-  rast <- raster(ncol=50,nrow=50)
+  rast <- raster(ncol=60,nrow=50)
   extent(rast) <- extent(coords2)
   col=colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan",
                          "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))#colorRampPalette( c('blue','red', 'yellow'), bias=1)
@@ -360,11 +335,6 @@ for (k in c(1,3,5,2,4,6)){
   
   P2$data =  (phi[,k])[PlotDF1$x2i]
   rast.temp <- rasterize(P2, rast, P2$data, fun = mean)
-
-  P3$data =  (pvalue[,k])[PlotDF1$x2i]
-  rast.temp3 <- rasterize(P3, rast, P3$data, fun = mean)
-  
-  
 
   plot(ocean,col="dark gray",axes=F,xlim=c(-180,-158),ylim=c(54,62),main=name_effect[k])
   image(rast.temp3,col="lightgrey",axes=TRUE,
@@ -398,3 +368,76 @@ for (k in c(1,3,5,2,4,6)){
 }
 
 dev.off()
+
+# Plot SE -------------------------------------------------
+
+bathy.dat<-read.table('BeringDepth.txt',sep='') 
+names(bathy.dat)<-c('lon','lat','depth')
+
+bathy.dat$depth[bathy.dat$depth>0]<-NA#Avoid points above water
+head(bathy.dat)
+bathy.mat<- matrix(bathy.dat$depth,nrow=length(unique(bathy.dat$lon)),ncol=length(unique(bathy.dat$lat)))[,order(unique(bathy.dat$lat))]
+
+
+png(paste("SE",'.png',sep=''), height = 8, width = 12, units = 'in', res=600)
+par(mfrow=c(2,3))
+#par(mar=c(4.5, 4.5, 0.5, 0.5))
+name_effect <- c("ColdEarly","WarmEarly","ColdInt","WarmInt","ColdLate","WarmLate")#"ColdLate","WarmLate")
+for (k in c(1,3,5,2,4,6)){
+  x <- Season[k]
+  y<- CP[k]
+  data_obs <- as_tibble(CPUE_catchability) %>% dplyr:: filter(Season == x, CP==y)
+  
+  x <- as.data.frame(MapDetails_List$PlotDF)
+  PlotDF1 = subset(x,Include==TRUE)
+  
+  unique(x$Include)
+  PlotDF1 <- as.data.frame(PlotDF1)
+  coords2 = cbind(PlotDF1$Lon,PlotDF1$Lat)
+  coords2 = coords2[coords2[,1]<0,]
+  P2 = SpatialPoints(coords2)
+  
+  rast <- raster(ncol=50,nrow=50)
+  extent(rast) <- extent(coords2)
+  col=colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan",
+                         "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))#colorRampPalette( c('blue','red', 'yellow'), bias=1)
+  
+  breakpoints  <-  seq(min( sd[PlotDF1$x2i,]),round(max(sd[PlotDF1$x2i,]+0.1),digits=1),(round(max(sd[PlotDF1$x2i,]),digits=1)-min( sd [PlotDF1$x2i,]))/70)
+
+  P2$data =  (sd[,k])[PlotDF1$x2i]
+  rast.temp <- rasterize(P2, rast, P2$data, fun = mean)
+  
+  plot(ocean,col="dark gray",axes=F,xlim=c(-180,-158),ylim=c(54,62),main=name_effect[k])
+  image(rast.temp3,col="lightgrey",axes=TRUE,
+        add=T,xlim=c(-180,-158),ylim=c(54,62))
+  image(rast.temp,col=col(length(breakpoints)-1),axes=TRUE,breaks=breakpoints,
+        add=T,xlim=c(-180,-158),ylim=c(54,62))
+  contour(unique(bathy.dat$lon),sort(unique(bathy.dat$lat)),bathy.mat,levels=-c(200,100,50),labcex=0.4,col='black',add=T)
+  points(data_obs$long,data_obs$lat, pch=3)
+  
+  
+  box()
+  legend_x=c(0.1,0.2)
+  legend_y=c(0.05,0.3)
+  cex.legend=0.4
+  xl = (1-legend_x[1])*par('usr')[1] + (legend_x[1])*par('usr')[2]
+  xr = (1-legend_x[2])*par('usr')[1] + (legend_x[2])*par('usr')[2]
+  yb = (1-legend_y[1])*par('usr')[3] + (legend_y[1])*par('usr')[4]
+  yt = (1-legend_y[2])*par('usr')[3] + (legend_y[2])*par('usr')[4]
+  if( diff(legend_y) > diff(legend_x) ){
+    align = c("lt","rb")[2]
+    gradient = c("x","y")[2]
+  }else{
+    align = c("lt","rb")[1]
+    gradient = c("x","y")[1]
+  }  
+  
+  plotrix::color.legend(xl=xl, yb=yb, xr=xr, yt=yt, legend=round(seq(min(breakpoints),max(breakpoints),length=4),2),
+                        rect.col=col(length(breakpoints)-1), cex=0.6, align=align, gradient=gradient)
+  
+  
+  
+}
+
+dev.off()
+

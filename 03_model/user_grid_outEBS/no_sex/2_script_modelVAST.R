@@ -20,8 +20,6 @@ rm(list=ls())
 getwd()
 # Load package ------------------------------------------------------------
 # Install FishStatsUtils from CRAN
-update.packages("VAST")
-version()
 
 library(VAST)
 library(TMB)
@@ -33,7 +31,7 @@ library(splines)
 library(FishStatsUtils)
 library(devtools)
 # Install package
-install_github("james-thorson/VAST", INSTALL_opts="--no-staged-install")
+#install_github("james-thorson/VAST", INSTALL_opts="--no-staged-install")
 # Load package
 library(VAST)
 version= get_latest_version(package="VAST")
@@ -41,26 +39,54 @@ version= get_latest_version(package="VAST")
 getwd()
 DateFile <- "03_model/user_grid"
 #setwd(DateFile)
-version= get_latest_version(package="VAST")
 
 # PREPARE DATA ----------------------------------------------------------
 # -------------------------------------------------------------------------
 load(file="02_transformed_data/observer/CPUE_catchability_adfg.RData")
-user_region <- readRDS('02_transformed_data/user_grid/user_region1.rds')
-plot(user_region)
+CPUE_catchability
+Sample_size <- CPUE_catchability %>% dplyr::group_by(year, Season, CP) %>% dplyr::summarise(sample=n())
+ggplot()+ geom_line(data=Sample_size, mapping = aes(x=year,y=sample, color = Season))
+
+map <- ggplot()+ 
+  geom_point(data=CPUE_catchability %>% filter(year %in% c(2011:2019)),aes(x=long,y=lat,col=log(CPUE.mean)),size=1)+
+  #geom_sf(data=Ab_map %>% filter(size_class==1),aes(col=log(A_pkt)))+
+  scale_color_viridis() + labs(colour= "Observed CPUE (log)")+
+  #   geom_sf(data=EBS,fill=NA, color="brown")+
+  #geom_sf(data = sebs_layers$bathymetry,size=0.2) +
+  geom_sf(data=world, col=NA, fill="black")+
+  coord_sf(xlim = xlims, ylim = ylims)+
+  facet_grid(year ~ Season)+
+  theme(axis.text = element_blank())
+#theme_bw(base_size = 8)
+
+ggsave((paste0(work_dir, "data2.png")),plot=map,
+       width = 27,
+       height = 30,
+       units = "cm")
+
+
+user_region <- readRDS('02_transformed_data/user_grid_outEBS/user_region.rds')
 plot(user_region$Lon,user_region$Lat)
 #user_region$Area_km2 <- 1
 
+
+x <- CPUE_catchability %>% dplyr::filter(year==2000,Season =="int")
+length(unique(x$adfg))
+
+ggplot()+ 
+  geom_point(data=x ,aes(x=long,y=lat,size=week,col=week),alpha=0.5)
+
 # - Settings ----------------------------------------------------------------
-settings = make_settings( n_x = 150,
+settings = make_settings( n_x = 100,
                           Region = "User",
-                          fine_scale=FALSE,
+                          #fine_scale=FALSE,
                           purpose = "index2",
                           bias.correct = FALSE,
-                          ObsModel = c(1,4),
-                         # knot_method='grid'
-                         knot_method='samples')
-
+                          ObsModel = c(1,4)#,
+                         #knot_method='grid'
+                         #knot_method='samples'
+                         )
+settings$fine_scale
 ??make_settings
 #fit$settings$knot_method
 
@@ -82,7 +108,7 @@ settings$FieldConfig[2,1]<-0
 # - Model : SeasonXCP covariate -----------------------------------------------------
 # -------------------------------------------------------------------------
 getwd()
-outputs_file <- "04_outputs/user_grid/EnvCxSeason/knot_method=samples_150knots/c(3,3,3,3,2,2)_grid1" 
+outputs_file <- "04_outputs/user_grid_outEBS/no_sex/finescale/c(3,3,3,3,2,2)/no2000/sum" 
 
 png(paste0(outputs_file,'/Interractions.png'), height = 6, width = 10, units = 'in', res=600)
 par(mfrow=c(1,2))
@@ -95,7 +121,7 @@ settings$Options["report_additional_variables"]=TRUE
 
 # Levels
 table(CPUE_catchability$CP)
-
+CPUE_catchability <- CPUE_catchability %>% filter(year>2000)
 # Build model matrix
 Q1_formula = ~   CP:Season
 Model_matrix1 = model.matrix( update.formula(Q1_formula, ~.), data=CPUE_catchability)
@@ -109,7 +135,7 @@ apply(Q1_ik,2,sum)
 # -------------------------------------------------------------------------
 
 CPUE_catchability <- as.data.frame(CPUE_catchability)
-workdir <- paste0(getwd(),"/",outputs_file)
+workdir <- paste0(getwd(),"/",outputs_file,"/")
 
 fit = fit_model( settings = settings,
                  Lat_i = CPUE_catchability[,'lat'],
@@ -120,6 +146,7 @@ fit = fit_model( settings = settings,
                  Q1config_k = c(3,3,3,3,2,2), 
                  Q_ik=Q1_ik,build_model = FALSE,
                  input_grid=user_region,working_dir=workdir)
+fit$data_list$n_g
 
 # plot knots
 knot_loc2 <- as.data.frame(fit$spatial_list$latlon_g)
@@ -147,14 +174,15 @@ fit = fit_model( settings = settings,
                  working_dir=workdir )
 
 save(fit, file=paste0(workdir,"/fit.RData"))
-load(paste0(workdir,"/fit.RData"))
-
+#load(paste0(workdir,"/fit.RData"))
+getwd()
 
 # -- plot ------------------------------------------------------------------
 # -------------------------------------------------------------------------
-load(paste0("fit.RData"))
-plot( fit,plot_set=c(3,6,7,15,16),
+
+plot( fit,plot_set=c(3,6,7,15,16,20),
       Yrange=c(NA,NA),working_dir =paste0(workdir,"/"))
+
 
 
 plot( fit,
@@ -163,9 +191,7 @@ plot( fit,
 
 dharmaRes = summary(fit, what="residuals", working_dir=workdir)
 
-file.info()
 
-getwd()
 # Test significativity ----------------------------------------------------
 # -------------------------------------------------------------------------
 # Re-run model with getJointPrecision=TRUE --------------------------------
@@ -184,11 +210,11 @@ fit_sign = fit_model( settings = settings,
 
 save(fit_sign, file=paste0(workdir,"/fit_sign.RData"))
 
-load(paste0(workdir,"/fit_sign.RData"))
+#load(paste0(workdir,"/fit_sign.RData"))
 
 
 plot( fit_sign,
-      Yrange=c(NA,NA),working_dir =paste0(workdir,"/"))
+      Yrange=c(NA,NA),working_dir= workdir)
 
 
 # Re sample  --------------------------------------------------------------
@@ -230,8 +256,10 @@ head(Q1_ik)
 
 
 # Plot covariates effects -------------------------------------------------
+dim(fit$Report$Index_gctl)
+dim(fit$data_frame)
 
-phi <- fit$Report$Phi1_sk
+phi <- fit$Report$Phi1_gk
 fit$Report$Phi1_ik
 dim(phi)
 
@@ -274,13 +302,14 @@ for (k in c(1,3,5,2,4,6)){
   col=colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan",
                          "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))#colorRampPalette( c('blue','red', 'yellow'), bias=1)
   
-  breakpoints  <-  seq(min( fit$Report$Phi1_sk[PlotDF1$x2i,]),round(max(fit$Report$Phi1_sk[PlotDF1$x2i,]),digits=1),(round(max(fit$Report$Phi1_sk[PlotDF1$x2i,]),digits=1)-min(fit$Report$Phi1_sk[PlotDF1$x2i,]))/70)
+  breakpoints  <-  seq(min( fit$Report$Phi1_gk[PlotDF1$x2i,]),round(max(fit$Report$Phi1_gk[PlotDF1$x2i,]),digits=1),(round(max(fit$Report$Phi1_gk[PlotDF1$x2i,]),digits=1)-min(fit$Report$Phi1_gk[PlotDF1$x2i,]))/70)
   range(fit$Report$Phi1_sk)
+  unique(PlotDF1$x2i)
   
-  P2$data =  (phi[,k])[PlotDF1$x2i]
+  P2$data = ((phi[,k])[PlotDF1$x2i])
   rast.temp <- rasterize(P2, rast, P2$data, fun = mean)
-  
-
+  dim((phi[,k])[PlotDF1$x2i])
+ dim(phi[PlotDF1$x2i,])
   
   plot(ocean,col="dark gray",axes=F,xlim=c(-180,-158),ylim=c(54,62),main=name_effect[k])
  
