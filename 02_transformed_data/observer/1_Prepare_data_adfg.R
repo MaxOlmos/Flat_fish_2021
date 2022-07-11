@@ -71,7 +71,7 @@ getwd()
 # Effort is towDur (Tow duration) within each week/area.
 Data_0 <- read_csv("01_data/observer/flats.csv", col_names = TRUE)
 file_output <- "02_transformed_data/observer"
-
+mean(Data_0$towDur)
 # - Check NA --------------------------------------------------------------
 Data_NA <- Data_0 %>% filter(is.na(lat))
 (unique(Data_NA$year))
@@ -84,18 +84,13 @@ Data <- Data_0 %>% mutate(CPUE = yfswt/towDur )
 
 # plot spatial 
 
-
+crs_ref <- "+proj=longlat +ellps=WGS84  +datum=WGS84 +no_defs"
 world <- ne_countries(scale = "medium", returnclass = "sf")
 # EBS
 shapefile <- st_read("02_transformed_data/EBSshelf/EBSshelf.shp")
 EBS <- st_transform(shapefile,crs=crs_ref)
 
-# Connect to a PostGIS instance
-drv <- dbDriver("PostgreSQL")
-liaison <- dbConnect(drv, host="sirs.agrocampus-ouest.fr",
-                     user="atlas", password="atlas", dbname="world_mapping")
 
-crs_ref <- "+proj=longlat +ellps=WGS84  +datum=WGS84 +no_defs"
 grid_cell<-raster(ext=extent(-180,-150,49,77),res=c(1,0.5), crs = "+init=epsg:4326") %>%
   rasterToPolygons() %>% # tranform en raster
   st_as_sf() %>% # en sf
@@ -160,6 +155,7 @@ Data_date <- Data_date %>%
 # - select only summer month : from May to August -------------------------
 Data_summer <-
   Data_date %>% as_tibble %>% filter(month %in% c("03","04", "05", "06", "07", "08","09")) %>% drop_na()
+
 
 p <- ggplot(data=Data_summer, aes(x=week, y=log(CPUE)))+geom_point()+ 
   stat_smooth( method = "gam", colour="black",size=2, formula = y ~ s(x))
@@ -241,6 +237,11 @@ Season <- rbind(Early,Int,Late)
 
 Data_adfg_1$week <- as.character(Data_adfg_1$week)
 CPUE_catchability <- right_join(as_tibble(Data_adfg_1), as_tibble(Season))
+
+
+# -- ISO
+CPUE_early <- CPUE_catchability %>% filter(year > 2000) %>% dplyr::group_by(season) %>% dplyr::summarise(min=min(month_day), max=max(month_day))
+
 
 # - mean CPUE (kg)/ month/adfg --------------------------------------------------
 CPUE_catchability_temp <- CPUE_catchability %>% group_by(year, season, CP,adfg) %>% summarise(CPUE.mean =mean(CPUE*1000))
