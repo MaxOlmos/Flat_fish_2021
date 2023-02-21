@@ -41,9 +41,9 @@ getwd()
 
 # PREPARE DATA ----------------------------------------------------------
 # -------------------------------------------------------------------------
-load(file="02_transformed_data/sex/CPUE_sex.RData")
+load(file="2022/02_transformed_data/sex/CPUE_sex.RData")
 
-user_region <- readRDS('02_transformed_data/user_grid_outEBS/user_region.rds')
+user_region <- readRDS('2022/02_transformed_data/user_grid_outEBS/user_region.rds')
 plot(user_region$Lon,user_region$Lat)
 #user_region$Area_km2 <- 1
 
@@ -67,9 +67,8 @@ settings$fine_scale
 
 ## WIHTOUT COVARIATES
 # because variance paramters are apporaching zero
-settings$FieldConfig[1,2]<-0
-settings$FieldConfig[2,2]<-0
-
+settings$FieldConfig[1,1]<-0
+settings$FieldConfig[2,1]<-0
 
 # RUN MODEL ---------------------------------------------------------------
 # -------------------------------------------------------------------------
@@ -79,12 +78,12 @@ settings$FieldConfig[2,2]<-0
 # - Model : SeasonXCP covariate -----------------------------------------------------
 # -------------------------------------------------------------------------
 getwd()
-sex="M"
+sex="F"
 
 if (sex=="F"){
-outputs_file <- "04_outputs/user_grid_outEBS/sex/female/no2000" 
+outputs_file <- "2022/04_outputs/user_grid_outEBS/sex/female" 
 } else{
-  outputs_file <- "04_outputs/user_grid_outEBS/sex/male/no2000" 
+  outputs_file <- "2022/04_outputs/user_grid_outEBS/sex/male" 
 }
 
 
@@ -130,7 +129,7 @@ fit = fit_model( settings = settings,
                  t_i = CPUE_catchability[,'year'],
                  b_i = CPUE_catchability[,'CPUE.mean'],
                  a_i = rep(1, nrow(CPUE_catchability)),
-                 Q1config_k = c(3,3,3,3,2,2), 
+                 Q2config_k = c(3,3,3,3,2,2), 
                  Q_ik=Q1_ik,build_model = FALSE,
                  input_grid=user_region,working_dir=workdir)
 fit$data_list$n_g
@@ -142,9 +141,9 @@ plot(knot_loc2$Lon,knot_loc2$Lat, col="red")
 
 # Modify Map
 Map = fit$tmb_list$Map
-Map$lambda2_k = rep(factor(NA),6)
+Map$lambda1_k = rep(factor(NA),6)
 #Map$lambda1_k = factor(c(1,1,2,2,3,3))
-Map$log_sigmaPhi1_k <- factor(rep(as.numeric(Map$log_sigmaPhi1_k[1]),6))
+Map$log_sigmaPhi2_k <- factor(rep(as.numeric(Map$log_sigmaPhi2_k[1]),6))
 
 
 fit = fit_model( settings = settings,
@@ -154,7 +153,7 @@ fit = fit_model( settings = settings,
                  b_i = CPUE_catchability[,'CPUE.mean'],
                  a_i = rep(1, nrow(CPUE_catchability)),
                  Map=Map,
-                 Q1config_k =c(3,3,3,3,2,2), 
+                 Q2config_k =c(3,3,3,3,2,2), 
                  Q_ik=Q1_ik,
                  input_grid=user_region,
                  #getJointPrecision=TRUE,
@@ -189,7 +188,7 @@ fit_sign = fit_model( settings = settings,
                  b_i = CPUE_catchability[,'CPUE.mean'],
                  a_i = rep(1, nrow(CPUE_catchability)),
                  Map=Map,
-                 Q1config_k =c(3,3,3,3,2,2), 
+                 Q2config_k =c(3,3,3,3,2,2), 
                  Q_ik=Q1_ik,
                  input_grid=user_region,
                  getJointPrecision=TRUE,

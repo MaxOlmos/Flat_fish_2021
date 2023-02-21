@@ -15,7 +15,7 @@ ak_map <- subset(map_data("world"), region=='USA' & subregion=='Alaska')
 
 # Load Bathymetry ---------------------------------------------------------
 
-bathy.dat<-read.table('C:/Users/Maxime/Documents/Git/Flat_fish_2021/01_data/bathyEBS/BeringDepth.txt',sep='') 
+bathy.dat<-read.table('C:/Users/Maxime/Documents/Git/Flat_fish_2021/2022/01_data/bathyEBS/BeringDepth.txt',sep='') 
 names(bathy.dat)<-c('lon','lat','depth')
 head(bathy.dat)
 
@@ -49,7 +49,9 @@ library(ggmap)
 y.data<- c(CPUE_catchability$lat,62,54)
 x.data<- c(CPUE_catchability$long,-168,-175)
 plot(x.data, y.data)
-contour(unique(bathy.dat$lon),sort(unique(bathy.dat$lat)),bathy.mat,levels=-c(200,100,50,25),labcex=0.4,col='black',add=T)
+#contour(unique(bathy.dat$lon),sort(unique(bathy.dat$lat)),bathy.dat$depth,levels=-c(200,100,50,25),labcex=0.4,col='black',add=T)
+
+
 polygon(wint1,col="blue")
 polygon(wint2,col="blue")
 polygon(wint3,col="blue")
@@ -75,7 +77,7 @@ save(wint2,file="02_transformed_data/map_migration/wint2.RData")
 wint3 <- locator()
 wint3 <- cbind(wint3$x, wint3$y)
 wint3 <- as.data.frame(wint3)
-save(wint3,file="02_transformed_data/map_migration/wint2.RData")
+save(wint3,file="02_transformed_data/map_migration/wint3.RData")
 
 
 feed1 <- locator()
@@ -102,6 +104,16 @@ sp3 <- locator()
 sp3 <- cbind(sp3$x, sp3$y)
 sp3 <- as.data.frame(sp3)
 save(sp3,file="02_transformed_data/map_migration/sp3.RData")
+
+
+
+load("02_transformed_data/map_migration/wint1.RData")
+load("02_transformed_data/map_migration/wint2.RData")
+load("02_transformed_data/map_migration/feed1.RData")
+load("02_transformed_data/map_migration/feed2.RData")
+load("02_transformed_data/map_migration/sp1.RData")
+load("02_transformed_data/map_migration/sp2.RData")
+load("02_transformed_data/map_migration/sp3.RData")
 
 
 y.data<- c(CPUE_catchability$lat,62,54)
@@ -137,10 +149,16 @@ un_end <- locator()
 save(un_end,file="02_transformed_data/map_migration/un_end.RData")
 
 
+load("02_transformed_data/map_migration/spring_start.RData")
+load("02_transformed_data/map_migration/spring_end.RData")
+load("02_transformed_data/map_migration/summer_start.RData")
+load("02_transformed_data/map_migration/summer_end.RData")
+load("02_transformed_data/map_migration/un_start.RData")
+load("02_transformed_data/map_migration/un_end.RData")
 
 vx_spring <- spring_end$x-spring_start$x
 vy_spring <- spring_end$y-spring_start$y
-d_spring=data.frame(x=spring_start$x, y=spring_start$y, vx= vx, vy= vy)
+d_spring=data.frame(x=spring_start$x, y=spring_start$y, vx= vx_spring, vy= vy_spring)
 
 vx_summer <- summer_end$x-summer_start$x
 vy_summer <- summer_end$y-summer_start$y
@@ -164,7 +182,7 @@ d <- bind_rows(d_spring, d_summer, d_un)
 
 
 # - polygons --------------------------------------------------------------
-
+library(smoothr)
 wint2s<-  smooth_ksmooth(as.matrix(wint2),smoothness = 1)
 wint1s<-  smooth_ksmooth(as.matrix(wint1),smoothness = 1)
 wint3s<-  smooth_ksmooth(as.matrix(wint3),smoothness = 1)
@@ -187,9 +205,10 @@ sp3s <- as_tibble(sp3s) %>% mutate(Areas = "Spawning")
 
 Areas1 <- bind_rows(wint1s,feed1s,sp1s)
 Areas2 <- bind_rows(wint2s,feed2s,sp2s)
+#Areas2 <- bind_rows(feed2s,sp2s)
 Areas3 <- bind_rows(wint3s,sp3s)
 
-Areas1 <- bind_rows(wint2s,wint1s,wint3s,feed1s,feed2s,sp1s,sp2s,sp3s)
+#Areas1 <- bind_rows(wint2s,wint1s,wint3s,feed1s,feed2s,sp1s,sp2s,sp3s)
 
 bathy.dat4 <- bathy.dat3 %>% mutate(Shelf = case_when ((depth >= -200) & (depth < -100) ~ "Outer"
                                                       ,(depth >= -100) & (depth < -50) ~ "Middle"
@@ -202,14 +221,19 @@ alphap <- 0.4
 p + geom_polygon(data=as.data.frame(Areas1), aes(x=V1,y=V2,fill=Areas),alpha=alphap)+
   geom_polygon(data=as.data.frame(Areas2), aes(x=V1,y=V2,fill=Areas),alpha=alphap)+
   geom_polygon(data=as.data.frame(Areas3), aes(x=V1,y=V2,fill=Areas),alpha=alphap)+
+  scale_fill_manual(values=c("gold2","slateblue2","aquamarine3"))+
   geom_segment(data=d, mapping=aes(x=x, y=y, xend=x+vx, yend=y+vy,colour=Migration_Route), arrow=arrow(type = 'closed'), size=1.3,alpha=1)+  
+  scale_linetype_manual(values=c("solid","solid","dashed"))+
   scale_color_manual(breaks = c("Spring", "Summer", "Uncertain"),
-                     values=c("purple", "Orange","grey" )) +
+                     values=c("darkblue", "royalblue1","lightblue" )) +
   geom_text(label="OuterShelf", x=-178.5,y=62,color = "brown",size=6)+
   geom_text(label="MiddleShelf", x=-174.5,y=62,color = "brown",size=6)+
   geom_text(label="InnerShelf", x=-167.5,y=62,color = "brown",size=6) 
 
-ggsave(file= "02_transformed_data/map_migration/map.png")
+ggsave(file= "02_transformed_data/map_migration/map2.png", width = 30,
+                                                           height = 20,
+                                                           units = "cm")
+       
 
 
 
