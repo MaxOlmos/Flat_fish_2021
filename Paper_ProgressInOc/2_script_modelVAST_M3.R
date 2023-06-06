@@ -41,7 +41,7 @@ getwd()
 
 # PREPARE DATA ----------------------------------------------------------
 # -------------------------------------------------------------------------
-load(file="20022_transformed_data/observer/CPUE_catchability_adfg.RData")
+load(file="2022_transformed_data/observer/CPUE_catchability_adfg.RData")
 CPUE_catchability
 Sample_size <- CPUE_catchability %>% dplyr::group_by(year, Season, CP) %>% dplyr::summarise(sample=n())
 ggplot()+ geom_line(data=Sample_size, mapping = aes(x=year,y=sample, color = Season))
